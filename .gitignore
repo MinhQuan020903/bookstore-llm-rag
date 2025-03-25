@@ -1,0 +1,13 @@
+.DS_Store
+data/*
+!data/put_raw_dataset_here.txt
+.env
+.env.sh
+modules/__pycache__/
+modules/helper/__pycache__/
+backup/
+output/*
+!data/output.txt
+!data/user_rating_total.parquet
+!data/book_eng.parquet
+!data/user_rating_cleaned.parquet
