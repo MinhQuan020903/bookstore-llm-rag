@@ -1,0 +1,8 @@
+streamlit
+pinecone-client
+langchain
+openai
+dotenv
+tqdm
+numpy
+pandas
