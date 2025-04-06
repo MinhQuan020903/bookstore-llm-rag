@@ -20,12 +20,26 @@ from modules.helper.PineconeSelfQueryRetriever import PineconeSelfQueryRetriever
 
 from FlagEmbedding import FlagModel
 
+from dotenv import dotenv_values, find_dotenv, load_dotenv
 import os
+import pinecone
+
+# Fix the path issue - find the .env file automatically or use a relative path
+env_path = find_dotenv(usecwd=True)
+if not env_path:
+    env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.env')
+
+print(f"Loading .env from: {env_path}")
+print(f"File exists: {os.path.exists(env_path)}")
+
+# Load environment variables
+config = dotenv_values(env_path)
+load_dotenv(env_path)
 
 class RAG:
     MODEL_NAME = 'text-embedding-ada-002'
     LLM_MODEL_NAME = 'gpt-4-1106-preview'
-    PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME")
+    PINECONE_INDEX_NAME = config.get("PINECONE_INDEX_NAME", "llm-recommender-system")
     USER_ID = '1'
 
     def __init__(self,
@@ -51,8 +65,8 @@ class RAG:
         self.agent = self.create_agent()
 
     def __load_environment_variables(self):
-        PINECONE_API = os.getenv("PINECONE_API")
-        PINECONE_ENV = os.getenv("PINECONE_ENV")
+        PINECONE_API = config.get("PINECONE_API")
+        PINECONE_ENV = config.get("PINECONE_ENV")
 
         return {
             "PINECONE_API": PINECONE_API,
@@ -67,11 +81,12 @@ class RAG:
         return embed
 
     def __initialize_vector_database(self):
-        pinecone.init(
-            api_key=self.env_vars["PINECONE_API"],
-            environment=self.env_vars["PINECONE_ENV"]
+        # Replace the old initialization method
+        pc = pinecone.Pinecone(
+            api_key= config.get("PINECONE_API")
         )
-        index = pinecone.Index(self.pinecone_index_name)
+        # Access the index through the Pinecone instance
+        index = pc.Index(self.pinecone_index_name)
         return index
     
 

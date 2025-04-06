@@ -8,12 +8,11 @@ from helper.PredictRating import PredictRating
 from functools import wraps
 import time
 import csv
-import pinecone
+from pinecone import Pinecone
 from langchain.embeddings import HuggingFaceEmbeddings
 from tqdm import tqdm
 import concurrent
 import concurrent.futures
-import os
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -192,20 +191,18 @@ class RecommendationSystem():
         PINECONE_API = config['PINECONE_API']
         PINECONE_ENV = config['PINECONE_ENV']
 
-        YOUR_API_KEY = PINECONE_API
-        YOUR_ENV = PINECONE_ENV
 
         index_name = 'llm-recommender-system'
-        pinecone.init(
-            api_key=YOUR_API_KEY,
-            environment=YOUR_ENV
-        )
+        # Updated Pinecone initialization
+        pc = Pinecone(api_key=PINECONE_API)
+        
+        # Get the index using the new API
+        index = pc.Index(index_name)
 
         batch_size = 100
         metadatas = []
         data.insert(0, 'category', ['recommended']*data.shape[0])
 
-        index = pinecone.Index(index_name)
         for i in tqdm(range(0, len(data), batch_size)):
             # get end of batch
             i_end = min(len(data), i+batch_size)
@@ -231,20 +228,11 @@ class RecommendationSystem():
         
         return
 
-    def save_and_load_books(self):
-        
-        return book_df
-
 
 if __name__ == '__main__':
     config = dotenv_values(".env")
 
     rs = RecommendationSystem()
-
-    # Save and load books
-    book_df = rs.save_and_load_books()
-    print(book_df.head())
-
     # data = rs.generate_recommendations()
 
     # Indexing Result to Pinecone

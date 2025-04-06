@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from dotenv import dotenv_values
-import pinecone
+from pinecone import Pinecone
 from langchain.embeddings import HuggingFaceEmbeddings
 from tqdm import tqdm
 
@@ -14,14 +14,8 @@ def index_embedding_vectors(data):
     PINECONE_API = config['PINECONE_API']
     PINECONE_ENV = config['PINECONE_ENV']
 
-    YOUR_API_KEY = PINECONE_API
-    YOUR_ENV = PINECONE_ENV
-
     index_name = 'llm-recommender-system'
-    pinecone.init(
-        api_key=YOUR_API_KEY,
-        environment=YOUR_ENV
-    )
+    pc = Pinecone(api_key=PINECONE_API)
 
     batch_size = 100
     metadatas = []
@@ -30,7 +24,8 @@ def index_embedding_vectors(data):
     data.insert(0, 'category', ['popular']*data.shape[0])
     # print(data)
 
-    index = pinecone.Index(index_name)
+    # Get the index using the new API
+    index = pc.Index(index_name)
     for i in tqdm(range(0, len(data), batch_size)):
         # get end of batch
         i_end = min(len(data), i+batch_size)

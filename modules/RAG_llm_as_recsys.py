@@ -1,6 +1,6 @@
 from dotenv import dotenv_values
 
-import pinecone
+from pinecone import Pinecone
 
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.chat_models import ChatOpenAI
@@ -22,6 +22,8 @@ from modules.helper.PineconeSelfQueryRetriever import PineconeSelfQueryRetriever
 from FlagEmbedding import FlagModel
 
 import os
+
+config = dotenv_values(".env")
 
 class RAG_llm:
     MODEL_NAME = 'text-embedding-ada-002'
@@ -68,11 +70,10 @@ class RAG_llm:
         return embed
 
     def __initialize_vector_database(self):
-        pinecone.init(
-            api_key=self.env_vars["PINECONE_API"],
-            environment=self.env_vars["PINECONE_ENV"]
-        )
-        index = pinecone.Index(self.pinecone_index_name)
+        API_KEY = config['PINECONE_API']
+        pc = Pinecone(api_key=API_KEY)
+        
+        index = pc.Index(self.pinecone_index_name)
         return index
     
 

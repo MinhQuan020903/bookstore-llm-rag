@@ -1,16 +1,23 @@
 import streamlit as st
+import os
+from dotenv import load_dotenv
+
+# Load the .env file
+dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
+load_dotenv(dotenv_path)
+
+# Manually set environment variables if needed
+# os.environ["PINECONE_API"] = "YOUR_API_KEY"
+# os.environ["PINECONE_ENV"] = "YOUR_ENV"
+
+# Debug print
+print(f".env file exists: {os.path.exists(dotenv_path)}")
+print(f"PINECONE_API in env: {'PINECONE_API' in os.environ}")
 
 from modules.RAG import RAG
 
 
 with st.sidebar:
-    "## CS4480 Group Project"
-    "[View the source code](https://github.com/Jonathandika/llm-recommender-system)"
-    "Authors: "
-    "Jonathan Andika"
-    "Seivabel Jessica"
-    "Ryan Gani"
-
     user_id = st.text_input("User ID", value="4614")
 
 st.title("💬 Chatbot")
