@@ -38,7 +38,7 @@ load_dotenv(env_path)
 
 class RAG:
     MODEL_NAME = 'text-embedding-ada-002'
-    LLM_MODEL_NAME = 'gpt-4-1106-preview'
+    LLM_MODEL_NAME = 'gpt-4o-mini'
     PINECONE_INDEX_NAME = config.get("PINECONE_INDEX_NAME", "llm-recommender-system")
     USER_ID = '1'
 
