@@ -1,14 +1,14 @@
-import streamlit as st
 import os
 from dotenv import load_dotenv
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
+import json
+import uvicorn
+from typing import List, Dict
 
 # Load the .env file
 dotenv_path = os.path.join(os.path.dirname(__file__), '.env')
 load_dotenv(dotenv_path)
-
-# Manually set environment variables if needed
-# os.environ["PINECONE_API"] = "YOUR_API_KEY"
-# os.environ["PINECONE_ENV"] = "YOUR_ENV"
 
 # Debug print
 print(f".env file exists: {os.path.exists(dotenv_path)}")
@@ -16,32 +16,101 @@ print(f"PINECONE_API in env: {'PINECONE_API' in os.environ}")
 
 from modules.RAG import RAG
 
+app = FastAPI(title="LLM Recommender System API")
 
-with st.sidebar:
-    user_id = st.text_input("User ID", value="4614")
+# Add CORS middleware to allow cross-origin requests
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-st.title("💬 Chatbot")
-st.caption("🚀 LLM Recommender System Chatbot")
+# WebSocket connection manager
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
 
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
 
-if "messages" not in st.session_state:
-    st.session_state["messages"] = [{"role": "assistant", "content": "How can I help you?"}]
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
 
-for msg in st.session_state.messages:
-    st.chat_message(msg["role"]).write(msg["content"])
+    async def send_response(self, websocket: WebSocket, message: str):
+        await websocket.send_text(message)
+        # Send end marker to signify completion
+        await websocket.send_text("[END]")
 
-if prompt := st.chat_input():
+manager = ConnectionManager()
 
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    st.chat_message("user").write(prompt)
+@app.websocket("/chat")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            print(f"Received message: {data}")
+            
+            try:
+                # Parse the incoming message
+                request_data = json.loads(data)
+                
+                # Extract the user_id and prompt from the request
+                prompt = request_data.get("prompt", "")
+                
+                if not prompt:
+                    error_msg = {"error": "No prompt provided"}
+                    await manager.send_response(websocket, json.dumps(error_msg))
+                    continue
+                
+                # Process the request with the RAG model
+                recommendation_agent = RAG(user_id='1')
+                response = recommendation_agent.agent(prompt)
+                
+                print("RESPONSE ===>", response)
+                print("KEYS ===>", response.keys())
+                
+                # Format the response to match the expected structure
+                formatted_response = {
+                    "output": response["output"],
+                    # Include any other fields from the response that are needed by the frontend
+                }
+                
+                # Send the response back to the client
+                await manager.send_response(websocket, json.dumps(formatted_response))
+                
+            except json.JSONDecodeError:
+                error_msg = {"error": "Invalid JSON format"}
+                await manager.send_response(websocket, json.dumps(error_msg))
+            except Exception as e:
+                error_msg = {"error": f"Processing error: {str(e)}"}
+                await manager.send_response(websocket, json.dumps(error_msg))
+                
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+        print("Client disconnected")
 
-    recommendation_agent = RAG(user_id=user_id)
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "message": "LLM Recommender System is running"}
 
-    response = recommendation_agent.agent(prompt)
-    print("REPONSE ===>", response)
-    print("KEYS ===>", response.keys())
-    
-    msg = {"role": "assistant", "content": response["output"]}
+# Root endpoint with basic information
+@app.get("/")
+async def root():
+    return {
+        "message": "LLM Recommender System API",
+        "description": "API for generating recommendations using LLM",
+        "endpoints": {
+            "websocket": "/ws/chat",
+            "health": "/health"
+        }
+    }
 
-    st.session_state.messages.append(msg)
-    st.chat_message("assistant").write(msg["content"])
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8000))
+    print(f"Starting FastAPI server on port {port}")
+    uvicorn.run(app, host="0.0.0.0", port=port)
