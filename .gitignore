@@ -8,6 +8,3 @@ modules/helper/__pycache__/
 backup/
 output/*
 !data/output.txt
-!data/user_rating_total.parquet
-!data/book_eng.parquet
-!data/user_rating_cleaned.parquet
